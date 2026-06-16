@@ -1,6 +1,16 @@
 # AI-Powered Semantic Search Engine
 
-A full-stack RAG-style semantic search application that allows users to upload PDF/TXT documents, retrieve relevant content using vector search, and generate concise answers from retrieved context.
+A full-stack AI-powered semantic search application that enables users to upload PDF/TXT documents, retrieve relevant information using vector similarity search, and generate concise answers from retrieved context. The system leverages Sentence Transformers for semantic embeddings, FAISS for vector indexing, FastAPI for backend APIs, and React for the user interface.
+
+---
+
+## Live Demo
+
+Frontend Deployment:
+
+https://ai-semantic-search-engine-dusky.vercel.app
+
+**Note:** The frontend is publicly deployed on Vercel. The backend utilizes transformer-based embedding models and FAISS indexing, which are demonstrated locally due to memory constraints on free hosting platforms.
 
 ---
 
@@ -13,6 +23,19 @@ A full-stack RAG-style semantic search application that allows users to upload P
 ### Semantic Search Results
 
 ![Semantic Search Results](./screenshots/results.png)
+
+---
+
+## Project Highlights
+
+* AI-powered semantic document retrieval
+* Vector search using FAISS indexing
+* Sentence Transformer embeddings for contextual understanding
+* PDF and TXT document ingestion pipeline
+* Answer generation from retrieved document context
+* FastAPI REST API backend
+* Responsive React frontend dashboard
+* End-to-end Retrieval-Augmented Search workflow
 
 ---
 
@@ -39,16 +62,16 @@ A full-stack RAG-style semantic search application that allows users to upload P
 ## Features
 
 * Upload PDF and TXT documents
-* Extract document text automatically
-* Split documents into searchable chunks
-* Generate semantic embeddings using Sentence Transformers
-* Store embeddings in a FAISS vector database
-* Perform meaning-based semantic search
-* Generate concise answers from retrieved context
-* Display ranked source chunks with similarity scores
-* View indexed document statistics
-* Clear all indexed documents and embeddings
-* Interactive React-based frontend
+* Automatic text extraction
+* Intelligent document chunking
+* Semantic embedding generation
+* FAISS vector indexing
+* Meaning-based document retrieval
+* Generated answers from retrieved context
+* Ranked search results with similarity scores
+* Indexed document management
+* Document statistics dashboard
+* Interactive React user interface
 
 ---
 
@@ -69,12 +92,10 @@ FAISS Vector Store
         ↓
 Semantic Retrieval
         ↓
-Generated Answer
+Answer Generation
         ↓
 React Frontend
 ```
-
----
 
 ## Folder Structure
 
@@ -110,15 +131,15 @@ ai-semantic-search-engine/
 
 ## How It Works
 
-1. User uploads a PDF or TXT document.
-2. The backend extracts document text.
-3. Text is divided into smaller chunks.
+1. Users upload PDF or TXT documents.
+2. The backend extracts raw document text.
+3. Documents are divided into smaller semantic chunks.
 4. Sentence Transformers generate vector embeddings.
-5. Embeddings are stored in a FAISS vector index.
-6. User submits a natural language query.
-7. FAISS retrieves the most relevant chunks.
-8. Retrieved chunks are used to generate an answer.
-9. Source chunks and similarity scores are displayed.
+5. Embeddings are indexed using FAISS.
+6. Users submit natural language queries.
+7. FAISS retrieves the most relevant document chunks.
+8. Retrieved chunks are used to generate a concise answer.
+9. Ranked source chunks and similarity scores are displayed.
 
 ---
 
@@ -178,30 +199,38 @@ http://localhost:5173
 | POST   | /search    | Semantic search and answer generation |
 | GET    | /documents | View indexed documents                |
 | GET    | /stats     | View indexing statistics              |
-| DELETE | /clear     | Clear all indexed data                |
+| DELETE | /clear     | Clear indexed data                    |
 
 ---
 
 ## Resume Description
 
-Built a full-stack AI-powered semantic search engine using FastAPI, React, Sentence Transformers, and FAISS to enable meaning-based document retrieval and answer generation from uploaded documents.
+Built a full-stack AI-powered semantic search engine using FastAPI, React, Sentence Transformers, and FAISS to support meaning-based document retrieval, vector search, and answer generation from uploaded documents.
 
 ---
 
 ## Resume Bullet Points
 
-* Developed a full-stack semantic search engine that enables users to upload PDF/TXT documents and search them using natural language queries.
-* Implemented document chunking, vector embedding generation, and FAISS-based similarity search for context-aware document retrieval.
-* Built FastAPI REST APIs and a React frontend to support document indexing, generated answers, ranked source chunks, and similarity scoring.
-* Designed an end-to-end retrieval pipeline using Sentence Transformers and vector databases for semantic document understanding.
+* Developed a semantic document retrieval system supporting PDF/TXT ingestion and natural language search.
+* Implemented document chunking, vector embedding generation, and FAISS-based similarity search for contextual information retrieval.
+* Built FastAPI REST APIs and a React dashboard for document indexing, retrieval, answer generation, and search visualization.
+* Designed an end-to-end Retrieval-Augmented Search pipeline using transformer embeddings and vector databases.
 
 ---
 
 ## Future Improvements
 
-* Gemini/OpenAI-powered RAG responses
-* Multi-document conversational chat
+* LLM-powered answer generation using Gemini or OpenAI APIs
+* Multi-document conversational chat interface
 * User authentication and document management
-* Cloud deployment using Docker and Kubernetes
-* Support for Word, Excel, and PowerPoint documents
-* Search analytics dashboard
+* Docker and Kubernetes deployment
+* Support for DOCX, PPTX, and XLSX files
+* Search analytics and usage dashboard
+
+---
+
+## Author
+
+**Sai Sri Krishna Teja Sanku**
+
+GitHub: https://github.com/krishnatejasai
