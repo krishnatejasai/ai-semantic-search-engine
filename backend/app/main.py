@@ -1,15 +1,21 @@
 import os
 import shutil
-from fastapi import FastAPI, UploadFile, File, Form
+from pathlib import Path
+
+from fastapi import FastAPI, File, Form, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.document_loader import read_pdf, read_txt, split_text
-from app.embeddings import create_embeddings
-from app.vector_store import vector_store
+from app.document_loader import load_document_text, split_text
+from app.embeddings import MODEL_NAME, create_embeddings
 from app.search import semantic_search
+from app.vector_store import vector_store
 
 
-app = FastAPI(title="AI-Powered Semantic Search Engine")
+app = FastAPI(
+    title="AI-Powered Semantic Search Engine",
+    description="Upload documents, generate embeddings, store them in FAISS, and search by meaning.",
+    version="1.0.0"
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -20,60 +26,101 @@ app.add_middleware(
 )
 
 DATA_DIR = "data"
-os.makedirs(DATA_DIR, exist_ok=True)
+Path(DATA_DIR).mkdir(exist_ok=True)
 
 
 @app.get("/")
 def home():
     return {
         "message": "AI-Powered Semantic Search Engine is running",
+        "model": MODEL_NAME,
         "features": [
             "PDF/TXT upload",
+            "Text extraction",
+            "Document chunking",
             "Sentence Transformer embeddings",
-            "FAISS semantic search",
-            "Document chunk retrieval"
+            "Persistent FAISS vector storage",
+            "Semantic similarity search",
+            "Document statistics"
         ]
+    }
+
+
+@app.get("/health")
+def health_check():
+    stats = vector_store.get_stats()
+
+    return {
+        "status": "healthy",
+        "model": MODEL_NAME,
+        "indexed_documents": stats["total_documents"],
+        "indexed_chunks": stats["total_chunks"]
     }
 
 
 @app.post("/upload")
 async def upload_document(file: UploadFile = File(...)):
-    file_path = os.path.join(DATA_DIR, file.filename)
+    file_name = file.filename
 
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+    if not file_name:
+        return {"success": False, "error": "Invalid file name"}
 
-    if file.filename.lower().endswith(".pdf"):
-        text = read_pdf(file_path)
-    elif file.filename.lower().endswith(".txt"):
-        text = read_txt(file_path)
-    else:
-        return {"error": "Only PDF and TXT files are supported"}
+    if not file_name.lower().endswith((".pdf", ".txt")):
+        return {"success": False, "error": "Only PDF and TXT files are supported"}
 
-    if not text:
-        return {"error": "Could not extract text from this document"}
+    if vector_store.file_exists(file_name):
+        return {
+            "success": False,
+            "error": "This file is already indexed. Clear documents or rename the file before uploading again."
+        }
 
-    chunks = split_text(text)
-    embeddings = create_embeddings(chunks)
+    file_path = os.path.join(DATA_DIR, file_name)
 
-    vector_store.add_documents(chunks, embeddings, file.filename)
+    try:
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
 
-    return {
-        "message": "Document uploaded and indexed successfully",
-        "file_name": file.filename,
-        "chunks_created": len(chunks)
-    }
+        text = load_document_text(file_path, file_name)
+
+        if not text:
+            return {
+                "success": False,
+                "error": "Could not extract readable text from this document"
+            }
+
+        chunks = split_text(text)
+        embeddings = create_embeddings(chunks)
+        vector_store.add_documents(chunks, embeddings, file_name)
+
+        return {
+            "success": True,
+            "message": "Document uploaded and indexed successfully",
+            "file_name": file_name,
+            "chunks_created": len(chunks),
+            "characters_extracted": len(text)
+        }
+
+    except Exception as error:
+        return {
+            "success": False,
+            "error": str(error)
+        }
 
 
 @app.post("/search")
-async def search_documents(query: str = Form(...), top_k: int = Form(5)):
+async def search_documents(
+    query: str = Form(...),
+    top_k: int = Form(5)
+):
     if not query.strip():
-        return {"error": "Search query cannot be empty"}
+        return {"success": False, "error": "Search query cannot be empty"}
 
     results = semantic_search(query, top_k)
 
     return {
+        "success": True,
         "query": query,
+        "results_count": len(results),
         "results": results
     }
 
@@ -81,7 +128,16 @@ async def search_documents(query: str = Form(...), top_k: int = Form(5)):
 @app.get("/documents")
 def get_documents():
     return {
+        "success": True,
         "documents": vector_store.get_documents()
+    }
+
+
+@app.get("/stats")
+def get_stats():
+    return {
+        "success": True,
+        "stats": vector_store.get_stats()
     }
 
 
@@ -96,5 +152,6 @@ def clear_documents():
                 os.remove(file_path)
 
     return {
-        "message": "All documents and vectors cleared successfully"
+        "success": True,
+        "message": "All uploaded documents and vector indexes cleared successfully"
     }

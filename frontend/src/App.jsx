@@ -8,18 +8,28 @@ function App() {
   const [file, setFile] = useState(null);
   const [query, setQuery] = useState("");
   const [topK, setTopK] = useState(5);
+
   const [documents, setDocuments] = useState([]);
+  const [stats, setStats] = useState({
+    total_documents: 0,
+    total_chunks: 0,
+    last_updated: null,
+  });
+
   const [results, setResults] = useState([]);
-  const [uploadMessage, setUploadMessage] = useState("");
+  const [message, setMessage] = useState("");
   const [loadingUpload, setLoadingUpload] = useState(false);
   const [loadingSearch, setLoadingSearch] = useState(false);
 
   const fetchDocuments = async () => {
     try {
-      const response = await axios.get(`${API_URL}/documents`);
-      setDocuments(response.data.documents || []);
+      const docsResponse = await axios.get(`${API_URL}/documents`);
+      const statsResponse = await axios.get(`${API_URL}/stats`);
+
+      setDocuments(docsResponse.data.documents || []);
+      setStats(statsResponse.data.stats || {});
     } catch (error) {
-      console.error(error);
+      setMessage("Backend server is not reachable.");
     }
   };
 
@@ -27,9 +37,30 @@ function App() {
     fetchDocuments();
   }, []);
 
+  const highlightText = (text, searchQuery) => {
+    if (!searchQuery.trim()) return text;
+
+    const words = searchQuery
+      .split(" ")
+      .filter((word) => word.length > 3)
+      .map((word) => word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+
+    if (words.length === 0) return text;
+
+    const regex = new RegExp(`(${words.join("|")})`, "gi");
+
+    return text.split(regex).map((part, index) =>
+      regex.test(part) ? (
+        <mark key={index}>{part}</mark>
+      ) : (
+        <span key={index}>{part}</span>
+      )
+    );
+  };
+
   const handleUpload = async () => {
     if (!file) {
-      setUploadMessage("Please select a PDF or TXT file first.");
+      setMessage("Please select a PDF or TXT file first.");
       return;
     }
 
@@ -38,22 +69,23 @@ function App() {
 
     try {
       setLoadingUpload(true);
-      setUploadMessage("");
+      setMessage("");
 
       const response = await axios.post(`${API_URL}/upload`, formData);
 
-      if (response.data.error) {
-        setUploadMessage(response.data.error);
-      } else {
-        setUploadMessage(
-          `${response.data.file_name} uploaded successfully. ${response.data.chunks_created} chunks created.`
-        );
+      if (!response.data.success) {
+        setMessage(response.data.error || "Upload failed.");
+        return;
       }
+
+      setMessage(
+        `${response.data.file_name} indexed successfully. ${response.data.chunks_created} chunks created.`
+      );
 
       setFile(null);
       fetchDocuments();
     } catch (error) {
-      setUploadMessage("Upload failed. Please check backend server.");
+      setMessage("Upload failed. Make sure the backend is running.");
     } finally {
       setLoadingUpload(false);
     }
@@ -61,6 +93,7 @@ function App() {
 
   const handleSearch = async () => {
     if (!query.trim()) {
+      setMessage("Please enter a search query.");
       return;
     }
 
@@ -70,9 +103,18 @@ function App() {
 
     try {
       setLoadingSearch(true);
+      setMessage("");
+
       const response = await axios.post(`${API_URL}/search`, formData);
+
+      if (!response.data.success) {
+        setMessage(response.data.error || "Search failed.");
+        return;
+      }
+
       setResults(response.data.results || []);
     } catch (error) {
+      setMessage("Search failed. Make sure the backend is running.");
       setResults([]);
     } finally {
       setLoadingSearch(false);
@@ -84,9 +126,14 @@ function App() {
       await axios.delete(`${API_URL}/clear`);
       setDocuments([]);
       setResults([]);
-      setUploadMessage("All documents cleared.");
+      setStats({
+        total_documents: 0,
+        total_chunks: 0,
+        last_updated: null,
+      });
+      setMessage("All documents and indexes cleared.");
     } catch (error) {
-      setUploadMessage("Could not clear documents.");
+      setMessage("Could not clear documents.");
     }
   };
 
@@ -96,11 +143,33 @@ function App() {
         <p className="tag">Python • FastAPI • Sentence Transformers • FAISS</p>
         <h1>AI-Powered Semantic Search Engine</h1>
         <p className="subtitle">
-          Upload documents and search them by meaning, not just exact keywords.
+          Upload PDF/TXT documents and search them by meaning, not only exact
+          keywords.
         </p>
       </header>
 
       <main className="container">
+        <section className="stats-grid">
+          <div className="stat-card">
+            <span>Indexed Documents</span>
+            <strong>{stats.total_documents || 0}</strong>
+          </div>
+
+          <div className="stat-card">
+            <span>Text Chunks</span>
+            <strong>{stats.total_chunks || 0}</strong>
+          </div>
+
+          <div className="stat-card">
+            <span>Last Updated</span>
+            <strong>
+              {stats.last_updated
+                ? new Date(stats.last_updated).toLocaleString()
+                : "Not yet"}
+            </strong>
+          </div>
+        </section>
+
         <section className="card">
           <h2>Upload Document</h2>
           <p className="muted">Supported formats: PDF and TXT</p>
@@ -109,19 +178,24 @@ function App() {
             <input
               type="file"
               accept=".pdf,.txt"
-              onChange={(e) => setFile(e.target.files[0])}
+              onChange={(event) => setFile(event.target.files[0])}
             />
+
             <button onClick={handleUpload} disabled={loadingUpload}>
               {loadingUpload ? "Indexing..." : "Upload & Index"}
             </button>
           </div>
 
-          {uploadMessage && <p className="message">{uploadMessage}</p>}
+          {message && <p className="message">{message}</p>}
         </section>
 
         <section className="card">
           <div className="section-title">
-            <h2>Indexed Documents</h2>
+            <div>
+              <h2>Indexed Documents</h2>
+              <p className="muted">Documents currently available for search</p>
+            </div>
+
             <button className="danger" onClick={handleClear}>
               Clear All
             </button>
@@ -131,10 +205,18 @@ function App() {
             <p className="muted">No documents indexed yet.</p>
           ) : (
             <div className="doc-list">
-              {documents.map((doc) => (
-                <div className="doc-item" key={doc.file_name}>
-                  <strong>{doc.file_name}</strong>
-                  <span>{doc.chunks} chunks</span>
+              {documents.map((document) => (
+                <div className="doc-item" key={document.file_name}>
+                  <div>
+                    <strong>{document.file_name}</strong>
+                    <p>{document.chunks} chunks indexed</p>
+                  </div>
+
+                  <span>
+                    {document.uploaded_at
+                      ? new Date(document.uploaded_at).toLocaleDateString()
+                      : "Saved"}
+                  </span>
                 </div>
               ))}
             </div>
@@ -143,22 +225,25 @@ function App() {
 
         <section className="card">
           <h2>Semantic Search</h2>
+          <p className="muted">
+            Ask a natural language question about your uploaded documents.
+          </p>
 
           <textarea
-            placeholder="Example: What does this document say about machine learning?"
+            placeholder="Example: What does this document say about neural networks?"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(event) => setQuery(event.target.value)}
           />
 
           <div className="search-row">
             <label>
-              Results:
+              Results
               <input
                 type="number"
                 min="1"
                 max="10"
                 value={topK}
-                onChange={(e) => setTopK(e.target.value)}
+                onChange={(event) => setTopK(event.target.value)}
               />
             </label>
 
@@ -172,16 +257,25 @@ function App() {
           <h2>Search Results</h2>
 
           {results.length === 0 ? (
-            <p className="muted">Results will appear here after searching.</p>
+            <p className="muted">Search results will appear here.</p>
           ) : (
             results.map((result, index) => (
-              <div className="result-card" key={index}>
+              <article className="result-card" key={`${result.file_name}-${index}`}>
                 <div className="result-header">
-                  <strong>#{index + 1} {result.file_name}</strong>
+                  <div>
+                    <strong>
+                      #{index + 1} {result.file_name}
+                    </strong>
+                    <p>Chunk {result.chunk_number}</p>
+                  </div>
+
                   <span>Similarity: {result.score}</span>
                 </div>
-                <p>{result.text}</p>
-              </div>
+
+                <p className="result-text">
+                  {highlightText(result.text, query)}
+                </p>
+              </article>
             ))
           )}
         </section>
