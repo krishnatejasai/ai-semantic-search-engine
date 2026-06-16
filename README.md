@@ -1,7 +1,6 @@
 # AI-Powered Semantic Search Engine
 
-A full-stack semantic search engine that allows users to upload PDF/TXT documents and search them using natural language queries.  
-The system uses Sentence Transformers to convert text into embeddings and FAISS for fast similarity search.
+A full-stack RAG-style semantic search application that lets users upload documents, retrieve relevant chunks using vector search, and generate concise answers from the retrieved context.
 
 ## Tech Stack
 
@@ -48,3 +47,11 @@ FAISS Vector Store
 Semantic Search Results
         ↓
 React Frontend
+
+## Screenshots
+
+### Application Dashboard
+![Dashboard](screenshots/home.png)
+
+### Generated Answer with Source Chunks
+![Results](screenshots/results.png)
