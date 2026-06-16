@@ -1,5 +1,13 @@
+import json
+import os
+
 import faiss
 import numpy as np
+
+
+INDEX_DIR = "storage"
+INDEX_PATH = os.path.join(INDEX_DIR, "faiss.index")
+DOCS_PATH = os.path.join(INDEX_DIR, "documents.json")
 
 
 class VectorStore:
@@ -7,6 +15,8 @@ class VectorStore:
         self.index = None
         self.documents = []
         self.dimension = None
+        os.makedirs(INDEX_DIR, exist_ok=True)
+        self.load()
 
     def add_documents(self, chunks, embeddings, file_name):
         embeddings = np.array(embeddings).astype("float32")
@@ -22,6 +32,8 @@ class VectorStore:
                 "file_name": file_name,
                 "text": chunk
             })
+
+        self.save()
 
     def search(self, query_embedding, top_k=5):
         if self.index is None or len(self.documents) == 0:
@@ -61,10 +73,31 @@ class VectorStore:
             for file_name, chunks in files.items()
         ]
 
+    def save(self):
+        if self.index is not None:
+            faiss.write_index(self.index, INDEX_PATH)
+
+        with open(DOCS_PATH, "w", encoding="utf-8") as file:
+            json.dump(self.documents, file, indent=2)
+
+    def load(self):
+        if os.path.exists(INDEX_PATH):
+            self.index = faiss.read_index(INDEX_PATH)
+
+        if os.path.exists(DOCS_PATH):
+            with open(DOCS_PATH, "r", encoding="utf-8") as file:
+                self.documents = json.load(file)
+
     def clear(self):
         self.index = None
         self.documents = []
         self.dimension = None
+
+        if os.path.exists(INDEX_PATH):
+            os.remove(INDEX_PATH)
+
+        if os.path.exists(DOCS_PATH):
+            os.remove(DOCS_PATH)
 
 
 vector_store = VectorStore()
