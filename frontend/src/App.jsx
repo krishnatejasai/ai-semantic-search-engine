@@ -17,6 +17,7 @@ function App() {
   });
 
   const [results, setResults] = useState([]);
+  const [answer, setAnswer] = useState("");
   const [message, setMessage] = useState("");
   const [loadingUpload, setLoadingUpload] = useState(false);
   const [loadingSearch, setLoadingSearch] = useState(false);
@@ -28,7 +29,7 @@ function App() {
 
       setDocuments(docsResponse.data.documents || []);
       setStats(statsResponse.data.stats || {});
-    } catch (error) {
+    } catch {
       setMessage("Backend server is not reachable.");
     }
   };
@@ -50,11 +51,7 @@ function App() {
     const regex = new RegExp(`(${words.join("|")})`, "gi");
 
     return text.split(regex).map((part, index) =>
-      regex.test(part) ? (
-        <mark key={index}>{part}</mark>
-      ) : (
-        <span key={index}>{part}</span>
-      )
+      regex.test(part) ? <mark key={index}>{part}</mark> : <span key={index}>{part}</span>
     );
   };
 
@@ -83,8 +80,10 @@ function App() {
       );
 
       setFile(null);
+      setResults([]);
+      setAnswer("");
       fetchDocuments();
-    } catch (error) {
+    } catch {
       setMessage("Upload failed. Make sure the backend is running.");
     } finally {
       setLoadingUpload(false);
@@ -104,6 +103,8 @@ function App() {
     try {
       setLoadingSearch(true);
       setMessage("");
+      setAnswer("");
+      setResults([]);
 
       const response = await axios.post(`${API_URL}/search`, formData);
 
@@ -112,9 +113,11 @@ function App() {
         return;
       }
 
+      setAnswer(response.data.answer || "");
       setResults(response.data.results || []);
-    } catch (error) {
+    } catch {
       setMessage("Search failed. Make sure the backend is running.");
+      setAnswer("");
       setResults([]);
     } finally {
       setLoadingSearch(false);
@@ -124,15 +127,18 @@ function App() {
   const handleClear = async () => {
     try {
       await axios.delete(`${API_URL}/clear`);
+
       setDocuments([]);
       setResults([]);
+      setAnswer("");
       setStats({
         total_documents: 0,
         total_chunks: 0,
         last_updated: null,
       });
+
       setMessage("All documents and indexes cleared.");
-    } catch (error) {
+    } catch {
       setMessage("Could not clear documents.");
     }
   };
@@ -143,8 +149,7 @@ function App() {
         <p className="tag">Python • FastAPI • Sentence Transformers • FAISS</p>
         <h1>AI-Powered Semantic Search Engine</h1>
         <p className="subtitle">
-          Upload PDF/TXT documents and search them by meaning, not only exact
-          keywords.
+          Upload PDF/TXT documents and search them using semantic retrieval and generated answers.
         </p>
       </header>
 
@@ -163,9 +168,7 @@ function App() {
           <div className="stat-card">
             <span>Last Updated</span>
             <strong>
-              {stats.last_updated
-                ? new Date(stats.last_updated).toLocaleString()
-                : "Not yet"}
+              {stats.last_updated ? new Date(stats.last_updated).toLocaleString() : "Not yet"}
             </strong>
           </div>
         </section>
@@ -230,7 +233,7 @@ function App() {
           </p>
 
           <textarea
-            placeholder="Example: What does this document say about neural networks?"
+            placeholder="Example: What skills does this document have?"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
           />
@@ -253,11 +256,18 @@ function App() {
           </div>
         </section>
 
+        {answer && (
+          <section className="answer-card">
+            <h2>Generated Answer</h2>
+            <p>{answer}</p>
+          </section>
+        )}
+
         <section className="results">
-          <h2>Search Results</h2>
+          <h2>Source Chunks</h2>
 
           {results.length === 0 ? (
-            <p className="muted">Search results will appear here.</p>
+            <p className="muted">Relevant source chunks will appear here.</p>
           ) : (
             results.map((result, index) => (
               <article className="result-card" key={`${result.file_name}-${index}`}>
@@ -272,9 +282,7 @@ function App() {
                   <span>Similarity: {result.score}</span>
                 </div>
 
-                <p className="result-text">
-                  {highlightText(result.text, query)}
-                </p>
+                <p className="result-text">{highlightText(result.text, query)}</p>
               </article>
             ))
           )}

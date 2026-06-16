@@ -117,9 +117,13 @@ async def search_documents(
 
     results = semantic_search(query, top_k)
 
+    from app.search import generate_answer
+    answer = generate_answer(query, results)
+
     return {
         "success": True,
         "query": query,
+        "answer": answer,
         "results_count": len(results),
         "results": results
     }

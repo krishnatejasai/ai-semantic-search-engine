@@ -263,3 +263,23 @@ mark {
     width: 100%;
   }
 }
+.answer-card {
+  background: #ecfdf5;
+  border: 1px solid #bbf7d0;
+  border-radius: 20px;
+  padding: 26px;
+  margin-bottom: 22px;
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.08);
+}
+
+.answer-card h2 {
+  margin: 0 0 10px;
+  color: #065f46;
+}
+
+.answer-card p {
+  margin: 0;
+  color: #064e3b;
+  line-height: 1.75;
+  font-weight: 600;
+}
